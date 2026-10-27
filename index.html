@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PSC Prep</title>
+<meta name="description" content="Study notes and exam plans for Mechanical JE, railway, SSC and Kerala PSC exams.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="sheet tb">
+    <div class="name"><span class="label">Drawing title</span><h1 id="t"></h1><span class="sub" id="st"></span></div>
+    <div><div class="label">Exams</div><div class="val" id="ex"></div></div>
+    <div><div class="label">Branch</div><div class="val" id="br"></div></div>
+    <div><div class="label">Guides ready</div><div class="val num" id="rd"></div></div>
+    <div><div class="label">Updated</div><div class="val num" id="up"></div></div>
+  </header>
+
+  <section class="sec" aria-labelledby="plan-h">
+    <header><h2 id="plan-h">Plan</h2></header>
+    <div id="plans" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <div id="groups" style="display:flex;flex-direction:column;gap:18px"></div>
+
+  <footer class="sheet foot">
+    <p>Each study guide covers one subject: what to learn, the formulas to memorise and past exam questions with worked answers. Use <strong>Hide answers</strong> inside a guide to test yourself.</p>
+    <p id="src"></p>
+  </footer>
+</div>
+
+<script src="assets/library.js"></script>
+<script>
+(function(){
+  const L = window.LIBRARY;
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const date = iso => iso ? iso.split("-").reverse().join("-") : "";
+
+  $("t").textContent = L.title;
+  $("st").textContent = L.subtitle;
+  $("ex").textContent = L.exams;
+  $("br").textContent = L.branch;
+  $("up").textContent = date(L.updated);
+  const all = L.groups.flatMap(g => g.subjects);
+  $("rd").textContent = `${all.filter(s => s.doc).length} of ${all.length}`;
+
+  L.plans.forEach(p => {
+    const a = el("a", "sheet plan"); a.href = p.href;
+    a.append(el("h3", null, p.title), el("span", "go", "Open plan →"), el("p", null, p.desc));
+    $("plans").append(a);
+  });
+
+  const maxW = Math.max(...all.map(s => s.weight || 0));
+  L.groups.forEach(g => {
+    const sec = el("section", "sec");
+    const head = el("header");
+    head.append(el("h2", null, g.name), el("p", null, g.note));
+    const list = el("div", "sheet subjects");
+    g.subjects.forEach((s, i) => {
+      const row = el(s.doc ? "a" : "div", "subj" + (s.doc ? "" : " planned"));
+      if (s.doc) row.href = "study.html?doc=" + encodeURIComponent(s.doc);
+      const main = el("div", "main");
+      main.append(el("h3", null, s.title));
+      if (s.weight) {
+        const w = el("div", "w"); const bar = el("span", "bar"); const fill = el("i");
+        fill.style.width = (s.weight / maxW * 100) + "%"; bar.append(fill);
+        w.append(bar, el("span", "num", s.weight.toFixed(1) + "% of technical Qs"));
+        main.append(w);
+      }
+      if (s.meta) main.append(el("div", "meta", s.meta + (s.updated ? " · updated " + date(s.updated) : "")));
+      const side = el("div", "side");
+      side.append(el("span", "chip " + (s.doc ? "ready" : "planned"), s.doc ? "Ready" : "Planned"));
+      row.append(el("div", "rank", String(i + 1)), main, side);
+      list.append(row);
+    });
+    sec.append(head, list);
+    $("groups").append(sec);
+  });
+
+  if (L.repo) {
+    const a = el("a", null, "Source on GitHub"); a.href = L.repo;
+    $("src").append(a, document.createTextNode(". Notes are written as Markdown in the notes folder."));
+  } else {
+    $("src").textContent = "Notes are written as Markdown in the notes folder.";
+  }
+})();
+</script>
+</body>
+</html>
