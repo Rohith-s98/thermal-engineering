@@ -3,90 +3,95 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PSC Prep</title>
-<meta name="description" content="Study notes and exam plans for Mechanical JE, railway, SSC and Kerala PSC exams.">
+<title>Study guide</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-<div class="wrap">
-  <header class="sheet tb">
-    <div class="name"><span class="label">Drawing title</span><h1 id="t"></h1><span class="sub" id="st"></span></div>
-    <div><div class="label">Exams</div><div class="val" id="ex"></div></div>
-    <div><div class="label">Branch</div><div class="val" id="br"></div></div>
-    <div><div class="label">Guides ready</div><div class="val num" id="rd"></div></div>
-    <div><div class="label">Updated</div><div class="val num" id="up"></div></div>
-  </header>
-
-  <section class="sec" aria-labelledby="plan-h">
-    <header><h2 id="plan-h">Plan</h2></header>
-    <div id="plans" style="display:flex;flex-direction:column;gap:10px"></div>
-  </section>
-
-  <div id="groups" style="display:flex;flex-direction:column;gap:18px"></div>
-
-  <footer class="sheet foot">
-    <p>Each study guide covers one subject: what to learn, the formulas to memorise and past exam questions with worked answers. Use <strong>Hide answers</strong> inside a guide to test yourself.</p>
-    <p id="src"></p>
-  </footer>
+<!-- This page shows README.md from the same folder: the guide lives there, and GitHub shows it on the repo page too. -->
+<nav class="topbar" aria-label="Guide">
+  <div class="in">
+    <span class="ttl" id="ttl"></span>
+    <a class="link" href="../mech-je-exam-plan/">Exam plan</a>
+    <button class="btn" id="hide" type="button" aria-pressed="false">Hide answers</button>
+  </div>
+</nav>
+<div class="reader">
+  <details class="sheet toc" id="toc" open><summary>Contents</summary><ol id="tocl"></ol></details>
+  <article class="sheet doc" id="doc"><p class="status">Loading…</p></article>
 </div>
 
-<script src="assets/library.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script>
 (function(){
-  const L = window.LIBRARY;
-  const $ = id => document.getElementById(id);
-  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const date = iso => iso ? iso.split("-").reverse().join("-") : "";
+  const doc = document.getElementById("doc");
+  const slugify = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-  $("t").textContent = L.title;
-  $("st").textContent = L.subtitle;
-  $("ex").textContent = L.exams;
-  $("br").textContent = L.branch;
-  $("up").textContent = date(L.updated);
-  const all = L.groups.flatMap(g => g.subjects);
-  $("rd").textContent = `${all.filter(s => s.doc).length} of ${all.length}`;
+  fetch("README.md").then(r => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(md => {
+    doc.innerHTML = DOMPurify.sanitize(marked.parse(md));
+    const h1 = doc.querySelector("h1");
+    if (h1) { document.title = h1.textContent; document.getElementById("ttl").textContent = h1.textContent; }
 
-  L.plans.forEach(p => {
-    const a = el("a", "sheet plan"); a.href = p.href;
-    a.append(el("h3", null, p.title), el("span", "go", "Open plan →"), el("p", null, p.desc));
-    $("plans").append(a);
-  });
-
-  const maxW = Math.max(...all.map(s => s.weight || 0));
-  L.groups.forEach(g => {
-    const sec = el("section", "sec");
-    const head = el("header");
-    head.append(el("h2", null, g.name), el("p", null, g.note));
-    const list = el("div", "sheet subjects");
-    g.subjects.forEach((s, i) => {
-      const row = el(s.doc ? "a" : "div", "subj" + (s.doc ? "" : " planned"));
-      if (s.doc) row.href = "study.html?doc=" + encodeURIComponent(s.doc);
-      const main = el("div", "main");
-      main.append(el("h3", null, s.title));
-      if (s.weight) {
-        const w = el("div", "w"); const bar = el("span", "bar"); const fill = el("i");
-        fill.style.width = (s.weight / maxW * 100) + "%"; bar.append(fill);
-        w.append(bar, el("span", "num", s.weight.toFixed(1) + "% of technical Qs"));
-        main.append(w);
-      }
-      if (s.meta) main.append(el("div", "meta", s.meta + (s.updated ? " · updated " + date(s.updated) : "")));
-      const side = el("div", "side");
-      side.append(el("span", "chip " + (s.doc ? "ready" : "planned"), s.doc ? "Ready" : "Planned"));
-      row.append(el("div", "rank", String(i + 1)), main, side);
-      list.append(row);
+    // Formula blocks (```math or ```latex) → KaTeX
+    doc.querySelectorAll("pre > code.language-math, pre > code.language-latex").forEach(code => {
+      const box = document.createElement("div"); box.className = "math";
+      try { katex.render(code.textContent.trim(), box, { displayMode: true, throwOnError: false }); }
+      catch (e) { box.textContent = code.textContent; }
+      code.parentElement.replaceWith(box);
     });
-    sec.append(head, list);
-    $("groups").append(sec);
+
+    // Wide tables scroll inside their own box
+    doc.querySelectorAll("table").forEach(t => { const s = document.createElement("div"); s.className = "tscroll"; t.replaceWith(s); s.append(t); });
+
+    // Past questions: bold "Q1." paragraphs, italic "Answer:" paragraphs
+    doc.querySelectorAll("p").forEach(p => {
+      const first = p.firstElementChild, lead = p.textContent.trim();
+      if (first && first.tagName === "STRONG" && /^Q\d+\./.test(lead)) p.classList.add("q");
+      if (first && first.tagName === "EM" && /^Answer:/.test(lead)) {
+        p.classList.add("ans");
+        const b = document.createElement("button"); b.type = "button"; b.className = "reveal"; b.textContent = "Show answer";
+        b.addEventListener("click", () => { p.classList.add("shown"); b.classList.add("used"); });
+        p.before(b);
+      }
+    });
+
+    // Contents from the h2 headings
+    const tocl = document.getElementById("tocl");
+    const links = [];
+    doc.querySelectorAll("h2").forEach(h => {
+      h.id = slugify(h.textContent);
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = "#" + h.id; a.textContent = h.textContent; li.append(a); tocl.append(li); links.push([h, a]);
+    });
+    // Contents start open beside the guide on wide screens, folded above it on narrow ones
+    const narrow = matchMedia("(max-width:900px)"), toc = document.getElementById("toc");
+    const fit = () => { toc.open = !narrow.matches; };
+    fit(); narrow.addEventListener("change", fit);
+    const spy = () => {
+      let cur = links[0];
+      links.forEach(l => { if (l[0].getBoundingClientRect().top < 120) cur = l; });
+      links.forEach(l => l[1].classList.toggle("on", l === cur));
+    };
+    addEventListener("scroll", spy, { passive: true }); spy();
+    if (location.hash) { const t = document.getElementById(location.hash.slice(1)); if (t) t.scrollIntoView(); }
+  }).catch(() => {
+    doc.innerHTML = '<p class="status">Could not load this guide. If you opened the file directly, serve the folder over http (for example <code>python -m http.server</code>) or use the GitHub page.</p>';
   });
 
-  if (L.repo) {
-    const a = el("a", null, "Source on GitHub"); a.href = L.repo;
-    $("src").append(a, document.createTextNode(". Notes are written as Markdown in the notes folder."));
-  } else {
-    $("src").textContent = "Notes are written as Markdown in the notes folder.";
-  }
+  // Hide answers toggle (remembered per browser)
+  const btn = document.getElementById("hide"), KEY = "study-guide-hide-answers";
+  const set = on => {
+    btn.setAttribute("aria-pressed", on); doc.classList.toggle("hide-ans", on);
+    if (on) doc.querySelectorAll(".ans.shown").forEach(p => { p.classList.remove("shown"); p.previousElementSibling?.classList.remove("used"); });
+    try { localStorage.setItem(KEY, on ? "1" : "0"); } catch (e) {}
+  };
+  let saved = false; try { saved = localStorage.getItem(KEY) === "1"; } catch (e) {}
+  set(saved);
+  btn.addEventListener("click", () => set(btn.getAttribute("aria-pressed") !== "true"));
 })();
 </script>
 </body>
